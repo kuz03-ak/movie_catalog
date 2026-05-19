@@ -75,8 +75,8 @@ LRESULT CALLBACK ChildProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
          SetWindowTextW(hDuration, buf);
     
             // Рейтинг - ОЧЕНЬ ВАЖНО: используем правильный формат
-         _snwprintf_s(buf, 64, _TRUNCATE, L"%.1f", editingMovie->rating);
-         SetWindowTextW(hRating, buf);
+        _snwprintf_s(buf, 64, _TRUNCATE, L"%.1f", editingMovie->rating);
+        SetWindowTextW(hRating, buf);
         }
             break;
         }
@@ -101,23 +101,36 @@ LRESULT CALLBACK ChildProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
 
         case WM_COMMAND: {
-            if(LOWORD(wParam) == 1) {
-                Movie movie;
+    if(LOWORD(wParam) == 1) {
+        Movie movie = {};  // Обнуляем всё!
 
-                GetWindowTextW(hTitle, movie.title, 100);
-                GetWindowTextW(hDirector, movie.director, 50);
-                GetWindowTextW(hGenre, movie.genre, 30);
+        GetWindowTextW(hTitle, movie.title, 100);
+        GetWindowTextW(hDirector, movie.director, 50);
+        GetWindowTextW(hGenre, movie.genre, 30);
 
-                wchar_t buf[50];
-                GetWindowTextW(hYear, buf, 20); movie.year = _wtoi(buf);
-                GetWindowTextW(hDuration, buf, 20); movie.duration = _wtoi(buf);
-                GetWindowTextW(hRating, buf, 20); movie.rating = _wtof(buf);
+        wchar_t buf[64] = {0};
 
-                SendMessageW(hParent, WM_SEND_MOVIE, (WPARAM)editingMovie, (LPARAM)&movie);
-                DestroyWindow(hwnd);
-            }
-            break;
+        // Год и длительность
+        GetWindowTextW(hYear, buf, 20);
+        movie.year = _wtoi(buf);
+
+        GetWindowTextW(hDuration, buf, 20);
+        movie.duration = _wtoi(buf);
+
+        // РЕЙТИНГ — САМОЕ ВАЖНОЕ ИСПРАВЛЕНИЕ
+        GetWindowTextW(hRating, buf, 20);
+        movie.rating = _wtof(buf);
+
+        // Защита от пустого рейтинга
+        if (movie.rating == 0.0 && buf[0] != L'0') {
+            movie.rating = 0.0; // или можно MessageBox с ошибкой
         }
+
+        SendMessageW(hParent, WM_SEND_MOVIE, (WPARAM)editingMovie, (LPARAM)&movie);
+        DestroyWindow(hwnd);
+    }
+    break;
+}
 
         case WM_DESTROY: {
             DeleteObject(hLabelFont);

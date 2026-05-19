@@ -55,50 +55,41 @@ void DemonstrateImplicitDLL() {
 }
 
 void DemonstrateExplicitDLL() {
+    if (movieList.empty()) {
+        MessageBoxW(NULL, L"Нет фильмов!", L"Explicit DLL", MB_OK);
+        return;
+    }
+
     if (!hExplicitDLL) {
         hExplicitDLL = LoadLibraryW(L"ExplicitDLL.dll");
         if (!hExplicitDLL) {
-            MessageBoxW(NULL, L"Failed to load ExplicitDLL.dll!", L"Error", MB_OK | MB_ICONERROR);
+            MessageBoxW(NULL, L"Не удалось загрузить ExplicitDLL.dll!", L"Ошибка", MB_OK | MB_ICONERROR);
             return;
         }
-        
+
         pSortByYear = (SortByYearFunc)GetProcAddress(hExplicitDLL, "SortMoviesByYearExplicit");
-        pAvgRating = (AvgRatingFunc)GetProcAddress(hExplicitDLL, "CalculateAverageRatingExplicit");
-        pFindByGenre = (FindByGenreFunc)GetProcAddress(hExplicitDLL, "FindMoviesByGenreExplicit");
-        pFindByDirector = (FindByDirectorFunc)GetProcAddress(hExplicitDLL, "FindMoviesByDirectorExplicit");
-        
-        if (!pSortByYear || !pAvgRating || !pFindByGenre || !pFindByDirector) {
-            MessageBoxW(NULL, L"Failed to get function pointers!", L"Error", MB_OK | MB_ICONERROR);
-            FreeLibrary(hExplicitDLL);
-            hExplicitDLL = NULL;
+        if (!pSortByYear) {
+            MessageBoxW(NULL, L"Не найдена функция SortMoviesByYearExplicit!", L"Ошибка", MB_OK | MB_ICONERROR);
             return;
         }
-        
-        MessageBoxW(NULL, L"DLL loaded successfully!", L"Explicit loading", MB_OK);
     }
+
+    // Глубокое копирование!
+    std::vector<Movie> sortedMovies(movieList.begin(), movieList.end());
     
-    if (movieList.empty()) {
-        MessageBoxW(NULL, L"No movies to sort!", L"Explicit DLL", MB_OK);
-        return;
-    }
-    
-    std::vector<Movie> sortedMovies = movieList;
     pSortByYear(sortedMovies.data(), (int)sortedMovies.size());
+
+    std::wstring message = L"Фильмы, отсортированные по году:\n\n";
     
-    std::wstring message = L"Movies sorted by year:\n\n";
-    int count = 0;
-    for (const auto& movie : sortedMovies) {
-        if (count++ >= 10) {
-            message += L"\n... and more";
-            break;
-        }
-        wchar_t line[512];
-        swprintf(line, 512, L"%s (%d) - %s, rating: %.1f\n", 
-                movie.title, movie.year, movie.director, movie.rating);
+    for (size_t i = 0; i < sortedMovies.size() && i < 6; ++i) {
+        const auto& m = sortedMovies[i];
+        wchar_t line[512] = {0};
+        swprintf(line, 512, L"%s (%d) — %s, рейтинг: %.1f\n", 
+                 m.title, m.year, m.director, m.rating);
         message += line;
     }
-    
-    MessageBoxW(NULL, message.c_str(), L"Explicit DLL - Sort by year", MB_OK);
+
+    MessageBoxW(NULL, message.c_str(), L"Explicit DLL - Sort by year", MB_OK | MB_ICONINFORMATION);
 }
 
 void DemonstrateAsmFunction() {
@@ -128,8 +119,7 @@ void DemonstrateAsmFunction() {
         for (size_t i = 0; i < movieList.size() && shown < 5; i++) {
             if (wcslen(movieList[i].title) > 10) {
                 wchar_t line[256];
-                swprintf(line, 256, L"• %s (%d chars)\n", 
-                         movieList[i].title, (int)wcslen(movieList[i].title));
+                swprintf(line, 256, L"• %s (%d chars)\n", movieList[i].title, (int)wcslen(movieList[i].title));
                 wcscat_s(message, 1024, line);
                 shown++;
             }
